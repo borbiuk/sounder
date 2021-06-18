@@ -1,8 +1,4 @@
 import time
-import io
-
-import os.path
-from os import path
 
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
@@ -10,33 +6,34 @@ from selenium.webdriver.firefox.options import Options
 
 from selenium import webdriver
 
-# colors
+#TODO:
+#   1. Set from console
+#           as parameters: PROFILE_ID, PAGES_COUNT, PATH
+#           as flags: show logs, not headless browser
+#   2. Refactoring:
+#           - create c_printer (privide color print)
+#           - driver_service (generate browser)
+#           - soundcloud_spy(get links by profile id)
+#           - sclouddownloader (download tracks by sclouddownloader)
+#           - var renaming
+#   3. Use local WebDriver
+#   4. Create web or desktop UI
+
+# constants
+PROFILE_ID='krle3gd6tuxg'
+PAGES_COUNT=1
+FIREFOX_LOGS_PATH='./geckodriver.log'
 OKGREEN='\033[92m'
 OKCYAN='\033[96m'
 OKBLUE='\033[94m'
 WARNING='\033[93m'
 FAIL='\033[91m'
 
-# start timer
-start_time = time.time()
-
-# init paramas
-PATH='C:\\Users\\borbi\\Desktop\\'
-FILE_ID='soundcloud_links'
-PROFILE_ID='krle3gd6tuxg'
-PAGES_COUNT=1
-DEALEY=0.1
-SMALL_WAIT=0.3
-BIG_WAIT=1
-LARGE_WAIT=2
-DOWNLOAD_WAIT=60
-
-# get new file name with uniqe key
-fileName = f'{PATH}{FILE_ID}_for_{PROFILE_ID}'
-
-# get browser
-def getBrowser():
+# returns configured browser
+def get_browser():
     fp = webdriver.FirefoxProfile()
+
+    # set preference to avoid Firefox pop-ups
     fp.set_preference("browser.download.folderList", 2)
     fp.set_preference("browser.download.panel.shown", False)
     fp.set_preference("browser.download.manager.showWhenStarting", False)
@@ -44,82 +41,83 @@ def getBrowser():
     fp.set_preference("privacy.popups.showBrowserMessage", False)
     fp.set_preference("browser.helperApps.neverAsk.saveToDisk", ".mp3 audio/mpeg")
 
-    options = Options()
-    options.headless = True
+    # set driver options torun headless browser
+    op = Options()
+    op.headless = True
 
-    browser=webdriver.Firefox(options=options, firefox_profile=fp, service_log_path="./geckodriver.log")
-
-    print (f'{OKBLUE}- Headless Browser Initialized{OKBLUE}')
+    browser=webdriver.Firefox(options=op, firefox_profile=fp, service_log_path=FIREFOX_LOGS_PATH)
 
     return browser
 
 # get links by profile id
-def links(browser, profile_id):
+def profile_links(browser, profile_id, pages_count):
     links=[]
 
-    # open page at browser
+    # open soundcloud profile liked tracks page at web browser
     browser.get(f'https://soundcloud.com/{profile_id}/likes')
-    #browser.
     browser.maximize_window()
-    time.sleep(SMALL_WAIT)
+    time.sleep(0.3)
 
-    # scroll page
+    # scroll page down
     body=browser.find_element_by_tag_name('body')
-    count=PAGES_COUNT
-    while count:
+    i = pages_count
+    while i:
         body.send_keys(Keys.PAGE_DOWN)
-        time.sleep(DEALEY)
-        count-=1
+        time.sleep(0.2)
+        i-=1
     
-    # add new links
+    # get links from hml
     elements=browser.find_elements_by_class_name('sound__coverArt')
     for element in elements:
         link=element.get_attribute('href')
-        if link.strip() and link not in links:
-            links.append(link)
-    links=[line.strip() for line in links]
+        links.append(link)
 
     return links
 
-# STABLE
-def download(browser, link, number):
-    try:
-        print(f'proccesing track {number}')
-        field=browser.find_element_by_name('sound-url')
-        field.clear()
-        field.send_keys(link)
-        time.sleep(0.1)
+# download track by link from https://sclouddownloader.net/
+def download_tracks(browser, links):
+    errors=[]
 
-        button1=browser.find_element_by_class_name('input-group-button')
-        button1.click()
-        time.sleep(1)
+    # open download service at browser
+    browser.get(f'https://sclouddownloader.net/')
+    time.sleep(0.3)
+    for number, link in enumerate(links):
+        try:
+            # set url at input
+            field=browser.find_element_by_name('sound-url')
+            field.clear()
+            field.send_keys(link)
+            time.sleep(0.1)
 
-        button2=browser.find_elements_by_class_name('button')[0]
-        button2.click()
-        time.sleep(2)
+            # click download button
+            button1=browser.find_element_by_class_name('input-group-button')
+            button1.click()
+            time.sleep(1)
 
-        back=browser.find_element_by_class_name('menu')
-        back.click()
-        time.sleep(0.5)
+            # click download button on /download-sound-track page
+            button2=browser.find_elements_by_class_name('button')[0]
+            button2.click()
+            time.sleep(2)
 
-    except BaseException as exception:
-        printCol(f'{FAIL}error:{FAIL}\n\t{exception}')
+            # return to the main page
+            back=browser.find_element_by_class_name('menu')
+            back.click()
+            time.sleep(0.5)
 
-# MAIN
-browser=getBrowser()
+        except BaseException as exception:
+            errors.append(number, exception)
 
-links=links(browser, PROFILE_ID)
-print(f'{OKBLUE}- {len(links)} tracks will be downloaded{OKBLUE}')
+    return errors
 
-browser.get(f'https://sclouddownloader.net/')
-time.sleep(SMALL_WAIT)
+# script
+browser=get_browser()
 
-i = 1
-for link in links:
-    download(browser, link, i)
-    i+=1
+links=profile_links(browser, PROFILE_ID, 10)
 
-time.sleep(DOWNLOAD_WAIT)
+download_tracks(browser, links)
+
+time.sleep(5)
+
 browser.quit()
 
-print(f'{OKBLUE}- Completed by {(time.time() - start_time) / 60.0} minutes ---{OKBLUE}')
+print(f'{len(links)} tracks completed')
