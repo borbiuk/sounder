@@ -10,6 +10,20 @@ from selenium.webdriver.firefox.options import Options
 
 from selenium import webdriver
 
+#TODO:
+#   1. Remove useless imports, var renaming, code formatting, comments
+#   2. Set from console
+#           as parameters: PROFILE_ID, PAGES_COUNT, PATH
+#           as flags: show logs, not headless browser
+#   3. Refactoring:
+#           - create c_printer (privide color print)
+#           - driver_service (generate browser)
+#           - soundcloud_spy(get links by profile id)
+#           - sclouddownloader (download tracks by sclouddownloader)
+#           - var renaming
+#   4. Use local WebDriver
+#   5. Create web or desktop UI
+
 # colors
 OKGREEN='\033[92m'
 OKCYAN='\033[96m'
@@ -29,7 +43,7 @@ DEALEY=0.1
 SMALL_WAIT=0.3
 BIG_WAIT=1
 LARGE_WAIT=2
-DOWNLOAD_WAIT=60
+DOWNLOAD_WAIT=5
 
 # get new file name with uniqe key
 fileName = f'{PATH}{FILE_ID}_for_{PROFILE_ID}'
